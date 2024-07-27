@@ -52,7 +52,8 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                     pprint.pp(title)
                     pprint.pp(posting_id)
 
-                    langs = ["ruby", "elixir", "node.js", "typescript", "golang", "go", "python",
+                    langs = ["ruby", "elixir", "nodejs", "node", "node.js",
+                             "typescript", "golang", "go", "python", "functional",
                              "java", "clojure", "scala", "haskell", "lisp", "rust", "swift",
                              "kotlin", "c++", "c#", "react", "vuejs", "javascript", "elm",
                              "groovy", "f#", "ocaml", "smalltalk", "scheme", "racket", "php",
@@ -81,4 +82,6 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                          str(apply_method),
                          str(company)])
 
+            # sort by number Found
+            # include a total of number searched
             pprint.pp(found_langs)
