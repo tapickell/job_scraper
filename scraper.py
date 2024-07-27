@@ -4,6 +4,7 @@ Module Doc String
 
 import csv
 import datetime
+from decimal import Decimal
 import json
 from pathlib import Path
 import pprint
@@ -22,6 +23,18 @@ def apply_url(apply_data):
     "unwraps the apply data structure to get at the apply url"
     unwrapped = list(apply_data.values())[0]
     return list(unwrapped.values())[1]
+
+def consolidate_technology(tech_term):
+    "Consolidates tech terms to ensure totals are combined"
+    match tech_term:
+        case "go":
+            return "golang"
+        case "node" | "nodejs":
+            return "node.js"
+        case "gql":
+            return "graphql"
+        case _:
+            return tech_term
 
 
 with open("credentials.json", "r", encoding="utf-8") as f:
@@ -151,20 +164,26 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                         if maybe_found != []:
                             [l, *_] = maybe_found
                             l_key = l.strip(",").strip()
-                            found_langs.setdefault(l_key, 0)
-                            found_langs[l_key] += 1
-                            technology.append(l_key)
-                            print(f"{l_key}: {found_langs[l_key]}")
+                            tech = consolidate_technology(l_key)
+                            found_langs.setdefault(tech, 0)
+                            found_langs[tech] += 1
+                            technology.append(tech)
+                            print(f"{tech}: {found_langs[tech]}")
 
                     money = r"\$[\d|,|k]*"
-                    moeny_found = re.findall(money, description_text)
+                    money_found = re.findall(money, description_text)
+                    xs = list(map(
+                        lambda s: Decimal(re.sub(r"[^\d.]", "", s.replace("k", ",000"))),
+                        money_found))
+                    xs.sort(reverse=True)
+                    mf_dec = list(map(str, xs))
 
                     job_count += 1
                     csv_writer.writerow(
                         [
                             title,
                             str(technology),
-                            str(moeny_found),
+                            str(mf_dec),
                             posting_id,
                             str(apply_method),
                             str(company),

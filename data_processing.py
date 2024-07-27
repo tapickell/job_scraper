@@ -3,7 +3,7 @@ Module Doc String
 """
 import os
 import re
-import pipe
+# import pipe
 import pandas as pd
 
 dtypes = {
@@ -14,25 +14,22 @@ dtypes = {
     "company": "category"
 }
 
-def fpsort(l):
+def fp_rev_sort(l):
     "sort without mutating state"
     lc = l.copy()
-    lc.sort()
+    lc.sort(reverse=True)
     return lc
 
-def fpreverse(l):
-    "reverse without mutating state"
-    lc = l.copy()
-    lc.reverse() # this is marginaly better
-    return lc
-
-# filepath = "results_2024-07-26_00/09/36.660941.csv"
 files = [f for f in os.listdir('.') if os.path.isfile(f) and re.match(r"^results", f)]
-# files.sort()
-# files.reverse() # mutating data feels so dirty :sad_panda:
-# preped_files = files | fpsort() | fpreverse() # need to figure out how pipes work in Python
-fs = fpreverse(fpsort(files))
+fs = fp_rev_sort(files)
 df = pd.read_csv(fs[0], dtype=dtypes, usecols=list(dtypes))
 
-filtered = df.query("technology != '[]'")
-deduped = filtered[filtered.duplicated()]
+deduped = df[df.duplicated()]
+filtered = deduped.query("technology != '[]'")
+
+# sort the money field to be largest values first,
+# sort by the money field so no vales last and lasrgest first value is first
+# sorted = filtered.
+
+# weighting ??
+# add weights to functional, senior, technology I like
