@@ -1,6 +1,7 @@
 """
 Module Doc String
 """
+
 import csv
 import datetime
 import json
@@ -9,14 +10,19 @@ import pprint
 import re
 from linkedin_api import Linkedin
 
+
 def company_name(company_data):
     "Get the company name from the nested company_data strucutre"
-    return company_data['com.linkedin.voyager.deco.jobs.web.shared.WebCompactJobPostingCompany']['companyResolutionResult']['name']
+    return company_data[
+        "com.linkedin.voyager.deco.jobs.web.shared.WebCompactJobPostingCompany"
+    ]["companyResolutionResult"]["name"]
+
 
 def apply_url(apply_data):
     "unwraps the apply data structure to get at the apply url"
     unwrapped = list(apply_data.values())[0]
     return list(unwrapped.values())[1]
+
 
 with open("credentials.json", "r", encoding="utf-8") as f:
     credentials = json.load(f)
@@ -25,12 +31,20 @@ with open("credentials.json", "r", encoding="utf-8") as f:
 
     if credentials:
         linkedin = Linkedin(credentials["username"], credentials["password"])
-        with open(file_path, 'w', encoding="utf-8", newline='') as csv_file:
-            field_names = ['title', 'technology', 'posting_id', 'apply_method', 'company']
+        with open(file_path, "w", encoding="utf-8", newline="") as csv_file:
+            field_names = [
+                "title",
+                "technology",
+                "money",
+                "posting_id",
+                "apply_method",
+                "company",
+            ]
             csv_writer = csv.writer(csv_file)
             csv_writer.writerow(field_names)
 
             found_langs = {}
+            job_count = 0
             for offset in range(21):
                 for job in linkedin.search_jobs(
                     keywords="software engineer",
@@ -39,7 +53,7 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                     location_name="United States",
                     remote=["2"],
                     limit=49,
-                    offset=offset
+                    offset=offset,
                 ):
                     job_id = job["entityUrn"].split(":")[3]
                     job_data = linkedin.get_job(job_id=job_id)
@@ -52,21 +66,87 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                     pprint.pp(title)
                     pprint.pp(posting_id)
 
-                    langs = ["ruby", "elixir", "nodejs", "node", "node.js",
-                             "typescript", "golang", "go", "python", "functional",
-                             "java", "clojure", "scala", "haskell", "lisp", "rust", "swift",
-                             "kotlin", "c++", "c#", "react", "vuejs", "javascript", "elm",
-                             "groovy", "f#", "ocaml", "smalltalk", "scheme", "racket", "php",
-                             "objective-c", "flutter", "dart", "lua", "perl", "erlang", "gleam",
-                             "clojerl", "hcl", "crystal", "julia", "zig", "fortran", "cobol",
-                             "prolog", "ada", "nim", "postgresql", "mysql", "mongodb", "redis",
-                             "mariadb", "elasticsearch", "snowflake", "neo4j", "flask", "django",
-                             "angular", "phoenix", "rails", ".net", "pytorch", "spring", "gql",
-                             "ios", "android", "concurency", "senior"]
+                    langs = [
+                        ".net",
+                        "ada",
+                        "android",
+                        "angular",
+                        "c#",
+                        "c++",
+                        "clojerl",
+                        "clojure",
+                        "cobol",
+                        "concurency",
+                        "crystal",
+                        "dart",
+                        "distributed",
+                        "django",
+                        "elasticsearch",
+                        "elixir",
+                        "elm",
+                        "erlang",
+                        "f#",
+                        "flask",
+                        "flutter",
+                        "fortran",
+                        "functional",
+                        "gleam",
+                        "go",
+                        "golang",
+                        "gql",
+                        "graphql",
+                        "groovy",
+                        "haskell",
+                        "hcl",
+                        "ios",
+                        "java",
+                        "javascript",
+                        "julia",
+                        "kotlin",
+                        "lisp",
+                        "lua",
+                        "mariadb",
+                        "mongodb",
+                        "mysql",
+                        "neo4j",
+                        "nim",
+                        "node",
+                        "node.js",
+                        "nodejs",
+                        "objective-c",
+                        "ocaml",
+                        "pascal",
+                        "perl",
+                        "phoenix",
+                        "php",
+                        "postgresql",
+                        "prolog",
+                        "purescript",
+                        "python",
+                        "pytorch",
+                        "racket",
+                        "rails",
+                        "react",
+                        "redis",
+                        "ruby",
+                        "rust",
+                        "scala",
+                        "scheme",
+                        "senior",
+                        "smalltalk",
+                        "snowflake",
+                        "spring",
+                        "swift",
+                        "typescript",
+                        "vuejs",
+                        "wasm",
+                        "webasembly",
+                        "zig",
+                    ]
 
                     technology = []
                     for lang in langs:
-                        reg = fr"\s{re.escape(lang)}[\s,]"
+                        reg = rf"\s{re.escape(lang)}[\s,]"
                         maybe_found = re.findall(reg, description_text)
                         if maybe_found != []:
                             [l, *_] = maybe_found
@@ -76,12 +156,21 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                             technology.append(l_key)
                             print(f"{l_key}: {found_langs[l_key]}")
 
-                    csv_writer.writerow([title,
-                         str(technology),
-                         posting_id,
-                         str(apply_method),
-                         str(company)])
+                    money = r"\$[\d|,|k]*"
+                    moeny_found = re.findall(money, description_text)
 
-            # sort by number Found
-            # include a total of number searched
-            pprint.pp(found_langs)
+                    job_count += 1
+                    csv_writer.writerow(
+                        [
+                            title,
+                            str(technology),
+                            str(moeny_found),
+                            posting_id,
+                            str(apply_method),
+                            str(company),
+                        ]
+                    )
+
+            sorted_langs = dict(sorted(found_langs.items(), key=lambda x: x[1]))
+            pprint.pp(sorted_langs)
+            print(f"Total: {job_count}")
