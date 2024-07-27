@@ -170,13 +170,19 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                             technology.append(tech)
                             print(f"{tech}: {found_langs[tech]}")
 
-                    money = r"\$[\d|,|k]*"
+                    money = r"\$[\d|,|k]+"
                     money_found = re.findall(money, description_text)
+                    print("MONEY")
+                    pprint.pp(money_found)
                     xs = list(map(
-                        lambda s: Decimal(re.sub(r"[^\d.]", "", s.replace("k", ",000"))),
+                        lambda s: Decimal(re.sub(
+                            r"[^\d.]",
+                            "",
+                            s.replace("k", ",000"))),
                         money_found))
                     xs.sort(reverse=True)
                     mf_dec = list(map(str, xs))
+                    pprint.pp(mf_dec)
 
                     job_count += 1
                     csv_writer.writerow(
