@@ -229,6 +229,7 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                     ]
 
                     technology = []
+                    found = []
                     for lang in langs:
                         reg = rf"\s{re.escape(lang)}[\s,)\.]"
                         maybe_found = re.findall(reg, description_text)
@@ -236,10 +237,12 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                             [l, *_] = maybe_found
                             l_key = l.strip(",").strip(")").strip(".").strip()
                             tech = consolidate_technology(l_key)
-                            found_langs.setdefault(tech, 0)
-                            found_langs[tech] += 1
-                            technology.append(tech)
-                            print(f"{tech}: {found_langs[tech]}")
+                            if tech not in found:
+                                found_langs.setdefault(tech, 0)
+                                found_langs[tech] += 1
+                                technology.append(tech)
+                                found.append(tech)
+                                print(f"{tech}: {found_langs[tech]}")
 
                     money = r"\$[\d|,|k]+"
                     money_found = re.findall(money, description_text)
