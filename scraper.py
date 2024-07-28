@@ -39,7 +39,7 @@ def consolidate_technology(tech_term):
 
 def unwrap_salary(insights):
     match insights['insightExists']:
-        case 'True':
+        case 'True' | True:
             return insights['compensationBreakdown']
         case _:
             return []
@@ -154,7 +154,6 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                         "concurency",
                         "crystal",
                         "dart",
-                        "data",
                         "distributed",
                         "django",
                         "elasticsearch",
