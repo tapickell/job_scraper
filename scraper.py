@@ -8,7 +8,9 @@ from decimal import Decimal
 import json
 from pathlib import Path
 import pprint
+import random
 import re
+from time import sleep
 from linkedin_api import Linkedin
 
 
@@ -17,7 +19,6 @@ def company_name(company_data):
     return company_data[
         "com.linkedin.voyager.deco.jobs.web.shared.WebCompactJobPostingCompany"
     ]["companyResolutionResult"]["name"]
-
 
 def apply_url(apply_data):
     "unwraps the apply data structure to get at the apply url"
@@ -36,6 +37,50 @@ def consolidate_technology(tech_term):
         case _:
             return tech_term
 
+def unwrap_salary(insights):
+    match insights['insightExists']:
+        case 'True':
+            return insights['compensationBreakdown']
+        case _:
+            return []
+
+def default_evade():
+    """
+    A catch-all method to try and evade suspension from Linkedin.
+    Currenly, just delays the request by a random (bounded) time
+    """
+    sleep(random.randint(2, 5))  # sleep a random duration to try and evade suspention
+
+def fetch(li, uri: str):
+    """GET request to Linkedin API"""
+    default_evade()
+
+    url = f"{li.client.API_BASE_URL}{uri}"
+    return li.client.session.get(url)
+
+def get_posting(li, post_id):
+    "hack to get another api call from the client without updating the package"
+    res = fetch(li,
+                f"/jobs/jobPostings/{post_id}"
+                f"?decorationId=com.linkedin.voyager.deco.jobs.web.shared.WebFullJobPosting-65&"
+                f"topN=1&"
+                f"topNRequestedFlavors=List(TOP_APPLICANT,IN_NETWORK,COMPANY_RECRUIT,SCHOOL_RECRUIT,HIDDEN_GEM,ACTIVELY_HIRING_COMPANY)"
+                )
+    data = res.json()
+    return data
+
+def get_card(li, card, posting_urn):
+    "hack to get another api call from the client without updating the package"
+    res = fetch(li,
+        f"/graphql?variables=("
+        f"cardSectionTypes:List({card}),jobPostingUrn:{posting_urn},"
+        f"includeSecondaryActionsV2:true)"
+        f"&queryId=voyagerJobsDashJobPostingDetailSections"
+        f".8c361bb81d00d0b85815039e26c73ed8"
+        )
+    # f".b0928897b71bd00a5a7291755dcd64f0" # what is this number from ????
+    data = res.json()
+    return data
 
 with open("credentials.json", "r", encoding="utf-8") as f:
     credentials = json.load(f)
@@ -49,6 +94,9 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                 "title",
                 "technology",
                 "money",
+                "salary",
+                "benefits",
+                "industries",
                 "posting_id",
                 "apply_method",
                 "company",
@@ -68,22 +116,36 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                     limit=49,
                     offset=offset,
                 ):
+                    # posting_urn = job["entityUrn"]
+                    # salary_card = get_card(linkedin, 'SALARY_CARD', posting_urn)
+                    # pprint.pp(salary_card)
                     job_id = job["entityUrn"].split(":")[3]
+                    jd = get_posting(linkedin, job_id)
+                    # pprint.pp(jd)
+                    salary_insights = unwrap_salary(jd['salaryInsights'])
+                    pprint.pp(salary_insights)
+                    benies = jd['benefits']
+                    pprint.pp(benies)
+                    industries = jd['formattedIndustries']
+                    pprint.pp(industries)
+                    content_source = jd['contentSource']
+                    pprint.pp(content_source)
                     job_data = linkedin.get_job(job_id=job_id)
                     description_text = job_data["description"]["text"].lower()
-                    print("Job Found:")
                     title = job_data["title"]
                     posting_id = job_data["jobPostingId"]
                     company = company_name(job_data["companyDetails"])
                     apply_method = apply_url(job_data["applyMethod"])
+                    print("Job Found:")
                     pprint.pp(title)
                     pprint.pp(posting_id)
 
                     langs = [
                         ".net",
-                        "ada",
                         "android",
                         "angular",
+                        "big data",
+                        "bigquery",
                         "c#",
                         "c++",
                         "clojerl",
@@ -92,6 +154,7 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                         "concurency",
                         "crystal",
                         "dart",
+                        "data",
                         "distributed",
                         "django",
                         "elasticsearch",
@@ -109,13 +172,16 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                         "gql",
                         "graphql",
                         "groovy",
+                        "hadoop",
                         "haskell",
                         "hcl",
                         "ios",
                         "java",
                         "javascript",
                         "julia",
+                        "kafka",
                         "kotlin",
+                        "linux",
                         "lisp",
                         "lua",
                         "mariadb",
@@ -126,8 +192,11 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                         "node",
                         "node.js",
                         "nodejs",
+                        "nosql",
+                        "numpy",
                         "objective-c",
                         "ocaml",
+                        "pandas",
                         "pascal",
                         "perl",
                         "phoenix",
@@ -141,6 +210,7 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                         "rails",
                         "react",
                         "redis",
+                        "redshift",
                         "ruby",
                         "rust",
                         "scala",
@@ -148,6 +218,7 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                         "senior",
                         "smalltalk",
                         "snowflake",
+                        "spark",
                         "spring",
                         "swift",
                         "typescript",
@@ -159,11 +230,11 @@ with open("credentials.json", "r", encoding="utf-8") as f:
 
                     technology = []
                     for lang in langs:
-                        reg = rf"\s{re.escape(lang)}[\s,]"
+                        reg = rf"\s{re.escape(lang)}[\s,)\.]"
                         maybe_found = re.findall(reg, description_text)
                         if maybe_found != []:
                             [l, *_] = maybe_found
-                            l_key = l.strip(",").strip()
+                            l_key = l.strip(",").strip(")").strip(".").strip()
                             tech = consolidate_technology(l_key)
                             found_langs.setdefault(tech, 0)
                             found_langs[tech] += 1
@@ -172,8 +243,6 @@ with open("credentials.json", "r", encoding="utf-8") as f:
 
                     money = r"\$[\d|,|k]+"
                     money_found = re.findall(money, description_text)
-                    print("MONEY")
-                    pprint.pp(money_found)
                     xs = list(map(
                         lambda s: Decimal(re.sub(
                             r"[^\d.]",
@@ -182,7 +251,6 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                         money_found))
                     xs.sort(reverse=True)
                     mf_dec = list(map(str, xs))
-                    pprint.pp(mf_dec)
 
                     job_count += 1
                     csv_writer.writerow(
@@ -190,12 +258,15 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                             title,
                             str(technology),
                             str(mf_dec),
+                            str(salary_insights),
+                            str(benies),
+                            str(industries),
                             posting_id,
                             str(apply_method),
                             str(company),
                         ]
                     )
 
-            sorted_langs = dict(sorted(found_langs.items(), key=lambda x: x[1]))
+            sorted_langs = dict(sorted(found_langs.items(), key=lambda x: x[1], reverse=True))
             pprint.pp(sorted_langs)
             print(f"Total: {job_count}")

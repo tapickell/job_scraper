@@ -1,8 +1,10 @@
 """
 Module Doc String
 """
+
 import os
 import re
+
 # import pipe
 import pandas as pd
 
@@ -11,8 +13,9 @@ dtypes = {
     "technology": "object",
     "posting_id": "category",
     "apply_method": "category",
-    "company": "category"
+    "company": "category",
 }
+
 
 def fp_rev_sort(l):
     "sort without mutating state"
@@ -20,7 +23,8 @@ def fp_rev_sort(l):
     lc.sort(reverse=True)
     return lc
 
-files = [f for f in os.listdir('.') if os.path.isfile(f) and re.match(r"^results", f)]
+
+files = [f for f in os.listdir(".") if os.path.isfile(f) and re.match(r"^results", f)]
 fs = fp_rev_sort(files)
 df = pd.read_csv(fs[0], dtype=dtypes, usecols=list(dtypes))
 
