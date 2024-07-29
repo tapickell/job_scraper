@@ -13,6 +13,9 @@ import re
 from time import sleep
 from linkedin_api import Linkedin
 
+def date_string():
+    "a formatted datestring"
+    str(datetime.datetime.now()).replace(" ", "_")
 
 def company_name(company_data):
     "Get the company name from the nested company_data strucutre"
@@ -38,6 +41,7 @@ def consolidate_technology(tech_term):
             return tech_term
 
 def unwrap_salary(insights):
+    "unwrap salary from secondary api call"
     match insights['insightExists']:
         case 'True' | True:
             return insights['compensationBreakdown']
@@ -79,12 +83,13 @@ def get_card(li, card, posting_urn):
         f".8c361bb81d00d0b85815039e26c73ed8"
         )
     # f".b0928897b71bd00a5a7291755dcd64f0" # what is this number from ????
+    # I think this call fails b/c this number is not what the server expects
     data = res.json()
     return data
 
 with open("credentials.json", "r", encoding="utf-8") as f:
     credentials = json.load(f)
-    file_path = f"results_{str(datetime.datetime.now()).replace(" ", "_")}.csv"
+    file_path = f"results_{date_string()}.csv"
     Path(file_path).touch()
 
     if credentials:
@@ -100,175 +105,178 @@ with open("credentials.json", "r", encoding="utf-8") as f:
                 "posting_id",
                 "apply_method",
                 "company",
+                "seen_at"
             ]
             csv_writer = csv.writer(csv_file)
             csv_writer.writerow(field_names)
 
             found_langs = {}
-            job_count = 0
-            for offset in range(21):
-                for job in linkedin.search_jobs(
-                    keywords="software engineer",
-                    experience=["4"],
-                    job_type=["F", "C"],
-                    location_name="United States",
-                    remote=["2"],
-                    limit=49,
-                    offset=offset,
-                ):
-                    # posting_urn = job["entityUrn"]
-                    # salary_card = get_card(linkedin, 'SALARY_CARD', posting_urn)
-                    # pprint.pp(salary_card)
-                    job_id = job["entityUrn"].split(":")[3]
-                    jd = get_posting(linkedin, job_id)
-                    # pprint.pp(jd)
-                    salary_insights = unwrap_salary(jd['salaryInsights'])
-                    pprint.pp(salary_insights)
-                    benies = jd['benefits']
-                    pprint.pp(benies)
-                    industries = jd['formattedIndustries']
-                    pprint.pp(industries)
-                    content_source = jd['contentSource']
-                    pprint.pp(content_source)
-                    job_data = linkedin.get_job(job_id=job_id)
-                    description_text = job_data["description"]["text"].lower()
-                    title = job_data["title"]
-                    posting_id = job_data["jobPostingId"]
-                    company = company_name(job_data["companyDetails"])
-                    apply_method = apply_url(job_data["applyMethod"])
-                    print("Job Found:")
-                    pprint.pp(title)
-                    pprint.pp(posting_id)
+            found_jobs = []
+            for rng in [range(20), range(20, 40), range(40, 60), range(60, 80), range(80, 100)]:
+                default_evade()
+                for offset in rng:
+                    print(f"Page: {offset}")
+                    for job in linkedin.search_jobs(
+                        keywords="software engineer",
+                        experience=["4"],
+                        job_type=["F", "C"],
+                        location_name="United States",
+                        remote=["2"],
+                        limit=49,
+                        offset=offset,
+                    ):
+                        job_id = job["entityUrn"].split(":")[3]
+                        if job_id not in found_jobs:
+                            found_jobs.append(job_id)
+                            jd = get_posting(linkedin, job_id)
+                            # pprint.pp(jd)
+                            salary_insights = unwrap_salary(jd['salaryInsights'])
+                            pprint.pp(salary_insights)
+                            benies = jd['benefits']
+                            pprint.pp(benies)
+                            industries = jd['formattedIndustries']
+                            pprint.pp(industries)
+                            content_source = jd['contentSource']
+                            pprint.pp(content_source)
+                            job_data = linkedin.get_job(job_id=job_id)
+                            description_text = job_data["description"]["text"].lower()
+                            title = job_data["title"]
+                            posting_id = job_data["jobPostingId"]
+                            company = company_name(job_data["companyDetails"])
+                            apply_method = apply_url(job_data["applyMethod"])
+                            print("Job Found:")
+                            pprint.pp(title)
+                            pprint.pp(posting_id)
 
-                    langs = [
-                        ".net",
-                        "android",
-                        "angular",
-                        "big data",
-                        "bigquery",
-                        "c#",
-                        "c++",
-                        "clojerl",
-                        "clojure",
-                        "cobol",
-                        "concurency",
-                        "crystal",
-                        "dart",
-                        "distributed",
-                        "django",
-                        "elasticsearch",
-                        "elixir",
-                        "elm",
-                        "erlang",
-                        "f#",
-                        "flask",
-                        "flutter",
-                        "fortran",
-                        "functional",
-                        "gleam",
-                        "go",
-                        "golang",
-                        "gql",
-                        "graphql",
-                        "groovy",
-                        "hadoop",
-                        "haskell",
-                        "hcl",
-                        "ios",
-                        "java",
-                        "javascript",
-                        "julia",
-                        "kafka",
-                        "kotlin",
-                        "linux",
-                        "lisp",
-                        "lua",
-                        "mariadb",
-                        "mongodb",
-                        "mysql",
-                        "neo4j",
-                        "nim",
-                        "node",
-                        "node.js",
-                        "nodejs",
-                        "nosql",
-                        "numpy",
-                        "objective-c",
-                        "ocaml",
-                        "pandas",
-                        "pascal",
-                        "perl",
-                        "phoenix",
-                        "php",
-                        "postgresql",
-                        "prolog",
-                        "purescript",
-                        "python",
-                        "pytorch",
-                        "racket",
-                        "rails",
-                        "react",
-                        "redis",
-                        "redshift",
-                        "ruby",
-                        "rust",
-                        "scala",
-                        "scheme",
-                        "senior",
-                        "smalltalk",
-                        "snowflake",
-                        "spark",
-                        "spring",
-                        "swift",
-                        "typescript",
-                        "vuejs",
-                        "wasm",
-                        "webasembly",
-                        "zig",
-                    ]
+                            langs = [
+                                ".net",
+                                "android",
+                                "angular",
+                                "big data",
+                                "bigquery",
+                                "c#",
+                                "c++",
+                                "clojerl",
+                                "clojure",
+                                "cobol",
+                                "concurency",
+                                "crystal",
+                                "dart",
+                                "distributed",
+                                "django",
+                                "elasticsearch",
+                                "elixir",
+                                "elm",
+                                "erlang",
+                                "f#",
+                                "flask",
+                                "flutter",
+                                "fortran",
+                                "functional",
+                                "gleam",
+                                "go",
+                                "golang",
+                                "gql",
+                                "graphql",
+                                "groovy",
+                                "hadoop",
+                                "haskell",
+                                "hcl",
+                                "ios",
+                                "java",
+                                "javascript",
+                                "julia",
+                                "kafka",
+                                "kotlin",
+                                "linux",
+                                "lisp",
+                                "lua",
+                                "mariadb",
+                                "mongodb",
+                                "mysql",
+                                "neo4j",
+                                "nim",
+                                "node",
+                                "node.js",
+                                "nodejs",
+                                "nosql",
+                                "numpy",
+                                "objective-c",
+                                "ocaml",
+                                "pandas",
+                                "pascal",
+                                "perl",
+                                "phoenix",
+                                "php",
+                                "postgresql",
+                                "prolog",
+                                "purescript",
+                                "python",
+                                "pytorch",
+                                "racket",
+                                "rails",
+                                "react",
+                                "redis",
+                                "redshift",
+                                "ruby",
+                                "rust",
+                                "scala",
+                                "scheme",
+                                "senior",
+                                "smalltalk",
+                                "snowflake",
+                                "spark",
+                                "spring",
+                                "swift",
+                                "typescript",
+                                "vuejs",
+                                "wasm",
+                                "webasembly",
+                                "zig",
+                            ]
 
-                    technology = []
-                    found = []
-                    for lang in langs:
-                        reg = rf"\s{re.escape(lang)}[\s,)\.]"
-                        maybe_found = re.findall(reg, description_text)
-                        if maybe_found != []:
-                            [l, *_] = maybe_found
-                            l_key = l.strip(",").strip(")").strip(".").strip()
-                            tech = consolidate_technology(l_key)
-                            if tech not in found:
-                                found_langs.setdefault(tech, 0)
-                                found_langs[tech] += 1
-                                technology.append(tech)
-                                found.append(tech)
-                                print(f"{tech}: {found_langs[tech]}")
+                            technology = []
+                            found = []
+                            for lang in langs:
+                                reg = rf"\s{re.escape(lang)}[\s,)\.]"
+                                maybe_found = re.findall(reg, description_text)
+                                if maybe_found != []:
+                                    [l, *_] = maybe_found
+                                    l_key = l.strip(",").strip(")").strip(".").strip()
+                                    tech = consolidate_technology(l_key)
+                                    if tech not in found:
+                                        found_langs.setdefault(tech, 0)
+                                        found_langs[tech] += 1
+                                        technology.append(tech)
+                                        found.append(tech)
+                                        print(f"{tech}: {found_langs[tech]}")
 
-                    money = r"\$[\d|,|k]+"
-                    money_found = re.findall(money, description_text)
-                    xs = list(map(
-                        lambda s: Decimal(re.sub(
-                            r"[^\d.]",
-                            "",
-                            s.replace("k", ",000"))),
-                        money_found))
-                    xs.sort(reverse=True)
-                    mf_dec = list(map(str, xs))
+                            MONEY = r"\$[\d|,|k]+"
+                            money_found = re.findall(MONEY, description_text)
+                            xs = list(map(
+                                lambda s: Decimal(re.sub(
+                                    r"[^\d.]",
+                                    "",
+                                    s.replace("k", ",000"))),
+                                money_found))
+                            xs.sort(reverse=True)
+                            mf_dec = list(map(str, xs))
 
-                    job_count += 1
-                    csv_writer.writerow(
-                        [
-                            title,
-                            str(technology),
-                            str(mf_dec),
-                            str(salary_insights),
-                            str(benies),
-                            str(industries),
-                            posting_id,
-                            str(apply_method),
-                            str(company),
-                        ]
-                    )
+                            csv_writer.writerow(
+                                [
+                                    title,
+                                    str(technology),
+                                    str(mf_dec),
+                                    str(salary_insights),
+                                    str(benies),
+                                    str(industries),
+                                    posting_id,
+                                    str(apply_method),
+                                    str(company),
+                                    date_string(),
+                                ]
+                            )
 
             sorted_langs = dict(sorted(found_langs.items(), key=lambda x: x[1], reverse=True))
             pprint.pp(sorted_langs)
-            print(f"Total: {job_count}")
+            print(f"Total: {len(found_jobs)}")
